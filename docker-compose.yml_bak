@@ -1,0 +1,30 @@
+version: '2'
+
+services:
+    reverseproxy:
+        image: reverseproxy
+        container_name: reverseproxy
+        ports:
+            - 8084:8084
+        restart: always
+        volumes:
+            - ./nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+            - ./base-validation.lua:/usr/local/openresty/nginx/base-validation.lua
+        links:
+            - memcache
+
+    hello:
+        depends_on:
+            - reverseproxy
+        image: doc185174/spring-boot-hello-world-example:latest
+        container_name: hello-world
+        restart: always
+
+    memcache:
+        image: memcached
+        ports:
+           - 11211:11211
+        container_name: memcache
+        hostname: memcache
+        restart: always 
+

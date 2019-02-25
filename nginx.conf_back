@@ -1,0 +1,52 @@
+worker_processes 1;
+
+events { worker_connections 1024; }
+
+http {
+
+    lua_package_path  "/etc/nginx/lua/?.lua;;";
+    sendfile on;
+    access_log access.log;
+    error_log  error.log; 
+
+
+
+    upstream docker-hello {
+        server hello:8080;
+    }
+
+    server {
+        listen 8084;
+
+        location / {
+
+		content_by_lua '
+                	local cjson = require "cjson"
+                	local jwt = require "resty.jwt"
+			local redirect = "true"
+                        local status = "INVALID_TOKEN"
+
+ 			local token = ngx.req.get_headers()["TOKEN"]
+
+                        if (redirect == "true") then
+                                -- Build json response at Nginx using Lua
+                                ngx.status = ngx.HTTP_UNAUTHORIZED
+                                ngx.header.content_type = "application/json; charset=utf-8"
+                                ngx.say(cjson.encode({ status = status }))
+                                return ngx.exit(ngx.HTTP_UNAUTHORIZED)
+                        else
+                                proxy_pass http://docker-hello;
+                        end			
+
+            		';
+
+
+       #     proxy_pass         http://docker-hello;
+        #    proxy_redirect     off;
+         #   proxy_set_header   Host $host;
+        #    proxy_set_header   X-Real-IP $remote_addr;
+        #    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        #    proxy_set_header   X-Forwarded-Host $server_name;
+        }
+    }
+}
